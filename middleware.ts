@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
     const token = request.cookies.get('sb-access-token');
     if (!token) {
       // Redirect to login if not authenticated
-      return NextResponse.redirect(new URL('/login', request.url));
+  return NextResponse.redirect(new URL('/auth/login', request.url));
     }
   }
 
