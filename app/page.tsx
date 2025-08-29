@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { LoginForm } from "@/components/auth/login-form"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -171,7 +171,11 @@ export default function Home() {
   }
 
   if (!user) {
-    return <LoginForm onLogin={setUser} />
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading…</div>}>
+        <LoginForm onLogin={setUser} />
+      </Suspense>
+    )
   }
 
   return <DashboardOverview user={user} />

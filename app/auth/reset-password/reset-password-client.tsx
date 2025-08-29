@@ -20,6 +20,30 @@ export default function ResetPasswordClient() {
   useEffect(() => {
     const init = async () => {
       try {
+        // Try to consume recovery params from URL and establish a session
+        // Supabase can send either hash tokens (access_token/refresh_token) or a `code` param
+        try {
+          if (typeof window !== "undefined") {
+            const hash = window.location.hash
+            if (hash?.startsWith("#")) {
+              const params = new URLSearchParams(hash.substring(1))
+              const access_token = params.get("access_token")
+              const refresh_token = params.get("refresh_token")
+              if (access_token && refresh_token) {
+                await supabase.auth.setSession({ access_token, refresh_token })
+              }
+            }
+            const search = new URLSearchParams(window.location.search)
+            const code = search.get("code")
+            if (code) {
+              // PKCE flow
+              await supabase.auth.exchangeCodeForSession(code)
+            }
+          }
+        } catch (_) {
+          // Ignore – we'll handle lack of session below
+        }
+
         const { data } = await supabase.auth.getSession()
         if (!data.session) {
           setIsError(true)
@@ -60,8 +84,10 @@ export default function ResetPasswordClient() {
         return
       }
       setIsError(false)
-      setMessage("Password updated successfully. Redirecting to sign in…")
-      setTimeout(() => router.push("/auth/login"), 1200)
+  setMessage("Password updated successfully. Redirecting to sign in…")
+  // End current recovery session to force a clean sign-in with the new password
+  await supabase.auth.signOut()
+  setTimeout(() => router.replace("/?reset=success"), 1000)
     } catch (err: any) {
       setIsError(true)
       setMessage(err?.message || "Something went wrong. Please try again.")

@@ -4,7 +4,7 @@
 import { useRouter } from "next/navigation"
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,9 +16,10 @@ import { CheckCircle, Users, Calendar, Zap } from "lucide-react"
 
 type LoginFormProps = {
   onLogin?: (user: { name: string; role: "guest" | "user" }) => void;
+  resetSuccess?: boolean; // display post-reset title/message
 };
 
-export function LoginForm({ onLogin }: LoginFormProps) {
+export function LoginForm({ onLogin, resetSuccess }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,6 +29,20 @@ export function LoginForm({ onLogin }: LoginFormProps) {
   const [registerMessage, setRegisterMessage] = useState("");
   const [registerError, setRegisterError] = useState("");
   const router = useRouter()
+  const [showResetTitle, setShowResetTitle] = useState<boolean>(!!resetSuccess)
+  // Also detect via window.location once on mount (no useSearchParams to avoid SSR Suspense requirement)
+  useEffect(() => {
+    if (resetSuccess) {
+      setShowResetTitle(true)
+      return
+    }
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      if (url.searchParams.get("reset") === "success") {
+        setShowResetTitle(true)
+      }
+    }
+  }, [resetSuccess])
 
   // Real login handler using Supabase
   const [welcomeMessage, setWelcomeMessage] = useState("");
@@ -162,11 +177,11 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           </div>
         </div>
 
-        {/* Auth Forms */}
+    {/* Auth Forms */}
         <Card className="w-full max-w-md mx-auto shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-900">Welcome</CardTitle>
-            <CardDescription className="text-gray-600">Sign in to your account or create a new one</CardDescription>
+      <CardTitle className="text-2xl font-bold text-gray-900">{showResetTitle ? "Please log in with your new password" : "Welcome"}</CardTitle>
+      <CardDescription className="text-gray-600">{showResetTitle ? "Use the new password you just set to access your account." : "Sign in to your account or create a new one"}</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -227,8 +242,9 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                         if (email) {
                           setIsLoading(true);
                           const { supabase } = await import("@/lib/supabase");
+                          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
                           const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                            redirectTo: `${window.location.origin}/auth/reset-password`,
+                            redirectTo: `${siteUrl}/auth/reset-password`,
                           });
                           setIsLoading(false);
                           if (error) {
